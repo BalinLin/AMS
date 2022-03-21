@@ -1,6 +1,7 @@
-
+;; Allows the model to use primitives from the extensions
 extensions [ matrix ]
 
+;; Declare variables and attributes
 breed [exits exit]
 breed [signals signal]
 breed [ people person ]
@@ -41,6 +42,7 @@ patches-own [
   floods
 ]
 
+;; Global variables
 globals [ m patch-data cw
           goal-x goal-y
           signals-x
@@ -52,16 +54,23 @@ globals [ m patch-data cw
           swaps
 
           knowledge-control
+
+          ;; ===== Modified =====
+          num_neighbors_0 ;; number of people around patch 34 45
+          num_neighbors_1 ;; number of people around patch 49 19
+          ;; ====================
         ]
 
+;; Initialize the simulation.
 to setup
-  set patch-data []
-  ;;clear-all
-  init-workspace
+  set patch-data [] ;; Initialize patch with empty array.
+  ;; clear-all
+  init-workspace ;; Set the infrastructure with boundary.
   create-workspace
   init-elements
 end
 
+;; Set the infrastructure with boundary.
 to init-workspace
   set m matrix:from-row-list [
                               [ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ]
@@ -143,11 +152,12 @@ to init-workspace
                            ]
 end
 
+;; Set the patches according to their value.
 to create-workspace
   clear-patches
 
   ask patches [
-                 if ( pxcor < 70 and pycor < 70 )
+                 if ( pxcor < 70 and pycor < 70 ) ;; if inside the world.
                  [
                    ifelse ( matrix:get m pycor pxcor ) = 1     ;; Walls.
                    [ set pcolor blue ]
@@ -162,13 +172,17 @@ to create-workspace
                ]
 end
 
-
+;; When "Setup elements" button is clicked.
+;; Store each object type and coordination according to their color.
 to init-elements
+
+  ;; Declare empty array for coordination of signal and exits.
   set signals-x ( list -1 )
   set signals-y ( list -1 )
   set exits-x ( list -1 )
   set exits-y ( list -1 )
 
+  ;; Set icon
   set-default-shape exits "x"
   set-default-shape signals "triangle"
   set-default-shape people "person"
@@ -181,14 +195,14 @@ to init-elements
     set signal? false
     set inside? ( ( abs pycor < ( max-pycor ) ) and ( abs pycor > ( min-pycor ) ) and ( abs pxcor > ( min-pxcor ) ) and ( abs pxcor < ( max-pycor ) ) )
 
-    ifelse ( pcolor = yellow )
+    ifelse ( pcolor = yellow ) ;; signals
     [
       set signal? true
       set signals-x lput pxcor signals-x
       set signals-y lput pycor signals-y
     ]
     [
-      ifelse ( pcolor = green )
+      ifelse ( pcolor = green ) ;; exits
       [
         set exit? true
         set goal-x pxcor
@@ -198,7 +212,7 @@ to init-elements
         set exits-y lput pycor exits-y
       ]
       [
-        if ( pcolor = 102 ) ;; Defining obstacles inside
+        if ( pcolor = 102 ) ;; Defining obstacles inside, they are walls.
         [
           set inside? false
         ]
@@ -211,7 +225,7 @@ to init-elements
 
   clear-turtles
 
-  create-exits ( ( length exits-x ) - 1 )
+  create-exits ( ( length exits-x ) - 1 ) ;; Give exits label number.
   [
     let i 1
     ask exits
@@ -224,7 +238,7 @@ to init-elements
     ]
   ]
 
-  create-signals ( ( length signals-x ) - 1 )
+  create-signals ( ( length signals-x ) - 1 ) ;; Give singals label number.
   [
     let i 1
     ask signals
@@ -240,6 +254,7 @@ to init-elements
   ;import-links
   ;import-exits
 
+  ;; Randomly select number of "agents" with black color (nothing on the patch) to be people, with no repeats.
   ask n-of agents (patches with [pcolor = black])
   [
     sprout-people 1
@@ -247,6 +262,7 @@ to init-elements
       set color white
       set dest nobody
 
+      ;; Let number of "knowledge" people know where is the nearest exit.
       if( knowledge-control < knowledge ) [
         set dest min-one-of exits [distance myself]
         set knowledge-control knowledge-control + 1
@@ -258,16 +274,18 @@ to init-elements
   ]
 end
 
+;; Initialize people's properties with some range of value.
 to init-people
   let i 1
   ask people [
     set node-id i
     set i (i + 1)
-    set age min-age + random max-age
+    set age min-age + random max-age ;; age = min-age + [0, max-age)
     if ( age >= max-speak-prob ) [
       set age max-age
     ]
 
+    ;; Younger people get lower speed value.
     ifelse( age >= 20 AND age <= 40 ) [
       set speed 0
     ]
@@ -285,18 +303,19 @@ to init-people
     set vision ( random-float ( 10 - 50 ) ) / age
     set hearing ( random-float ( 10 - 50 ) ) / age
 
-    set reaction-time min-reaction-time + random max-reaction-time
+    set reaction-time min-reaction-time + random max-reaction-time ;; reaction-time = min-reaction-time + [0, max-reaction-time)
     if ( reaction-time >= max-reaction-time ) [
       set reaction-time max-reaction-time
     ]
 
-    set speak-prob min-speak-prob + random max-speak-prob
+    set speak-prob min-speak-prob + random max-speak-prob ;; speak-prob = min-speak-prob + [0, max-speak-prob)
     if ( speak-prob >= max-speak-prob ) [
       set speak-prob max-speak-prob
     ]
   ]
 end
 
+;; Import links from txt file.
 to import-links
   let directory ""
   let strFile "./inputs/links.txt"
@@ -332,10 +351,12 @@ to import-links
   file-close
 end
 
+;; Find a sign by id
 to-report get-sign-node [ id ]
   report one-of signals with [ node-id = id ]
 end
 
+;; Import exits from txt file.
 to import-exits
   let directory ""
   let strFile "./inputs/exits.txt"
@@ -371,10 +392,12 @@ to import-exits
   file-close
 end
 
+;; Find a exit by id
 to-report get-exit-node [ id ]
   report one-of exits with [ node-id = id ]
 end
 
+;; Import signals and exits from file.
 to import-signals-exits
   let directory ".\\inputs\\"
   let strFile word directory fileSignsExits
@@ -411,25 +434,42 @@ to import-signals-exits
   ;import-exits
 end
 
+;; Find a exit by id
 to-report get-signal-exit-node [ id ]
   report one-of exits with [ node-id = id ]
 end
 
+;; When "go" button is clicked. Start the simulation.
 to go
-  reset-ticks
-  tick
-  move-people
-  set population count turtles with [inside? AND color != green AND color != red]
-  plot population
+  reset-ticks ;; reset step of simulation.
+  tick ;; Count step by one.
+
+  ;; ===== Modified =====
+  ;; Set the global variables to the number of neighbors around the entrance.
+  ask patch 34 45[
+    set num_neighbors_0 count turtles-on neighbors
+  ]
+  ask patch 49 16[
+    set num_neighbors_1 count turtles-on neighbors
+  ]
+  ;; ====================
+
+  move-people ;; Move all people
+  set population count turtles with [inside? AND color != green AND color != red] ;; Calculate how many people don't know where's the nearest exit.
+  plot population ;; Plot a line that y-axis is population and x-axis is tick.
+
+  ;; If every people know where's the nearest exit.
   if ( ( not any? people ) OR ( all? people [ ( color = green OR color = red ) ] ) ) [
-    set-plot-x-range 0 ticks
-    stop
+    ;;set-plot-x-range 0 ticks ;; Make x-axis to be zero.
+    stop ;; Stop simulation
   ]
 end
 
+;; Define the color of people.
 to move-people
   ask people [
 
+    ;; Reports the single patch that is the given distance "ahead" of the person and with green color.
     ifelse( [pcolor] of patch-ahead 0 = green )
     [
       set color green
@@ -438,6 +478,7 @@ to move-people
       ]
     ]
     [
+      ;; With yellow color.
       ifelse ( [pcolor] of patch-ahead 0 = yellow )
       [
         let answers-points []
@@ -470,6 +511,7 @@ to move-people
         ]
       ]
       [
+        ;; Doesn't run into anyone with color.
         ;fd 1
         move-person
       ]
@@ -477,17 +519,20 @@ to move-people
 ]
 end
 
+;; Define how the people move according to the color.
 to move-person
   let new-dest nobody
   let self-speak speak-prob
   ask people-on neighbors [
-    if( ( self-speak + speak-prob ) > speak-prob-threshold ) [
-      ifelse( ( dest != nobody ) AND ( member? dest exits  ) ) [
+    if( ( self-speak + speak-prob ) > speak-prob-threshold ) [ ;; If the sum of the near people's speak-prob is bigger than threshold.
+      ifelse( ( dest != nobody ) AND ( member? dest exits  ) ) [ ;; If neighbors know the nearest exit.
+        ;; Let the guy know the nearest exit and be green.
         set new-dest dest
         set color green
       ]
       [
         if( ( dest != nobody ) AND ( member? dest signals ) ) [
+          ;; Let the guy know the nearest exit and be yellow.
           set new-dest dest
           set color yellow
         ]
@@ -498,20 +543,38 @@ to move-person
     ;set dest new-dest
     set location new-dest
     set dest new-dest
-    set flood-index position 0 [floods] of new-dest
+    set flood-index position 0 [floods] of new-dest ;; First "0" in the list.
     ;;set color brown
   ]
 
    ifelse dest != nobody [
      ifelse inside?
-     [ let i flood-index
-       ;;let n0 neighbors with [ (inside? or exit?) and (item i floods < item i [floods] of myself) ]
-       let n0 neighbors with [ (inside?) and (item i floods < item i [floods] of myself) ]
-       let n n0 with [ (not any? people-here) ]
-       let frust (turtle-set [people-here with [frustrated?]] of n0)
-       set frust frust with [ item flood-index [floods] of myself < item flood-index floods ]
-       ifelse any? n [go-to one-of n] [if frustrated? and any? frust [swap one-of frust]] ]
-     [ ifelse patch-ahead 1 = nobody [
+     [
+      ;; ===== Modified =====
+      ;; If someone around the entrance of building, keep walking.
+      ifelse ( pycor >= 45 and num_neighbors_0 != 0)[ ;; The building on top.
+        ;set color red
+        move-no-dest
+      ]
+      [
+        ifelse ( pxcor >= 49 and pycor <= 19 and num_neighbors_1 != 0)[ ;; The building in the corner.
+          ;set color red
+          move-no-dest
+        ]
+        [
+          let i flood-index
+          ;;let n0 neighbors with [ (inside? or exit?) and (item i floods < item i [floods] of myself) ]
+          let n0 neighbors with [ (inside?) and (item i floods < item i [floods] of myself) ]
+          let n n0 with [ (not any? people-here) ]
+          let frust (turtle-set [people-here with [frustrated?]] of n0)
+          set frust frust with [ item flood-index [floods] of myself < item flood-index floods ]
+          ifelse any? n [go-to one-of n] [if frustrated? and any? frust [swap one-of frust]]
+        ]
+      ]
+      ;; ====================
+     ]
+     [
+      ifelse patch-ahead 1 = nobody [
          die
        ]
        [
@@ -531,10 +594,13 @@ to move-person
    ]
 end
 
+;; Randomly move until meet any wall then change the direction.
 to move-no-dest
-  ifelse( reaction-time <= 0 )
+  ifelse( reaction-time <= 0 ) ;; People can move only when reaction-time is equal or less than zero.
   [
-    ;;ask people-on neighbors with [ inside? ] [
+    ;; ask people-on neighbors with [ inside? ] [
+    ;; patch-ahead means distance along the person's current heading.
+    ;; If there is a wall in front of it, just follow the neighbors's heading.
       if( ( ( [pcolor] of patch-ahead 0 = blue ) OR ( [pcolor] of patch-ahead 0 = 102 ) ) OR
              ( ( [pcolor] of patch-ahead 1 = blue ) OR ( [pcolor] of patch-ahead 1 = 102 ) ) ) [
       face one-of neighbors with[ inside? ]
@@ -543,7 +609,7 @@ to move-no-dest
       ;;fd speed
       ifelse ( step >= speed ) [
         set step 0
-        fd 1
+        fd 1 ;; Move forward
       ]
       [
         set step ( step + 1 )
@@ -553,15 +619,17 @@ to move-no-dest
   [ reduce-reaction-time ]
 end
 
-
+;; Reduce reaction-time
 to reduce-reaction-time
   set reaction-time reaction-time - 1
 end
 
+;; Kill people.
 to exit-management
   die
 end
 
+;; Draw walls (building).
 to patch-draw
   if ( cw != 1 )
   [
@@ -578,6 +646,7 @@ to patch-draw
     ]
 end
 
+;; Draw signals.
 to signal-draw
   if ( cw != 1 )
   [
@@ -594,6 +663,7 @@ to signal-draw
     ]
 end
 
+;; Draw exits.
 to exit-draw
   if ( cw != 1 )
   [
@@ -610,6 +680,7 @@ to exit-draw
     ]
 end
 
+;; Erase all kind of objects.
 to patch-erase
   if mouse-down?
     [
@@ -621,6 +692,7 @@ to patch-erase
     ]
 end
 
+;; Erase walls (building).
 to erase-walls
  ask patches [
    if( pcolor = 102 )
@@ -628,6 +700,7 @@ to erase-walls
  ]
 end
 
+;; Erase signals.
 to erase-signals
  ask patches [
    if( pcolor = yellow )
@@ -635,6 +708,7 @@ to erase-signals
  ]
 end
 
+;; Erase exits.
 to erase-exits
  ask patches [
    if( pcolor = green )
@@ -642,6 +716,7 @@ to erase-exits
  ]
 end
 
+;; Save a ".mdl" file.
 to save-to-file
   let directory ".\\inputs\\"
   let strFile word directory fileInput
@@ -653,6 +728,7 @@ to save-to-file
   file-close
 end
 
+;; Save singals and exit to a file.
 to save-signs-exits
   let directory ".\\inputs\\"
   let strFile word directory fileSignsExits
@@ -672,6 +748,7 @@ to save-signs-exits
   file-close
 end
 
+;; Load patches from a file.
 to load-patch-data
 
   ifelse ( file-exists? "File IO Patch Data.txt" )
@@ -694,6 +771,7 @@ to load-patch-data
   [ user-message "There is no File IO Patch Data.txt file in current directory!" ]
 end
 
+;; Load a ".mdl" file, which is how we get the infrastructure.
 to load-own-patch-data
   let file user-new-file
 
@@ -710,8 +788,9 @@ to load-own-patch-data
   ]
 end
 
+;; Show infrastructure.
 to show-patch-data
-  cp ct
+  cp ct ;; clear-patches, clear-turtles
   ifelse ( is-list? patch-data )
     [ foreach patch-data [ ?1 -> ask patch first ?1 item 1 ?1 [ set pcolor last ?1 ] ] ]
     [ user-message "You need to load in patch data first!" ]
@@ -735,10 +814,10 @@ to flood-fill [pset]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
-10
-708
-509
+222
+12
+720
+511
 -1
 -1
 7.0
@@ -1590,7 +1669,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.1
+NetLogo 6.2.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
